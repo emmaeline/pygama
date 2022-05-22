@@ -643,3 +643,63 @@ class SIS3316ORCADecoder(OrcaDecoder):
         tb['ievt'].nda[ii] = self.ievt
         self.ievt += 1
         tb.push_row()
+
+
+        
+#This is a test decoder for the AMI286 Level sensor
+class ORAMI286LEVELDECODER(OrcaDecoder):
+    def __init__(self, *args, **kwargs):
+
+        self.decoder_name = 'ORAmi286DecoderForLevel'
+        self.orca_class_name = "LevelSensorDecoders"
+
+        self.decoded_values = {
+            'geoaddress': {
+                'dtype': 'uint32',
+            #},
+            #'event_counter': {
+                #'dtype': 'uint64',
+            },
+            'ievt': {
+                'dtype': 'uint32',
+            },
+            'ch0_ls': {
+                'dtype': 'uint32',
+            },
+            'ch0_timestamp': {
+                'dtype': 'uint32'
+            }
+        }
+        super().__init__(*args, **kwargs)  # also initializes the garbage df (whatever that means...)
+
+        self.skipped_channels = {}
+        self.ievt = 0
+
+    def get_decoded_values(self, channel=None):
+        # TODO: return channel-specific decoded_values
+        return self.decoded_values
+
+    def set_object_info(self, object_info):
+        self.object_info = object_info
+
+    def max_n_rows_per_packet(self):
+        return 1
+
+    def decode_packet(self, packet, lh5_tables, packet_id, header_dict, verbose=False):
+
+        # parse the raw event data into numpy arrays of 16 and 32 bit ints
+        evt_data_32 = np.fromstring(packet, dtype=np.uint32)
+        evt_data_16 = np.fromstring(packet, dtype=np.uint16)
+
+        tb = lh5_tables
+
+        ii = tb.loc
+
+        tb['geoaddress'].nda[ii] = (evt_data_32[0]) #& 0x7C000000) >> 26
+        tb['ch0_ls'].nda[ii] = evt_data_32[1]
+        tb['ch0_timestamp'].nda[ii] = evt_data_32[2]
+
+
+        tb['ievt'].nda[ii] = self.ievt
+        self.ievt += 1
+        tb.push_row()
